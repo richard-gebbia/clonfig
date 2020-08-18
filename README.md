@@ -18,3 +18,11 @@ Example usage:
     (cfg/init! args)
     (println *foo*))
 ```
+
+Then, you can invoke this program like so:
+
+```
+clj -m my-cool-program.core --foo 'Hello, world!'
+```
+
+and you'll see the familiar `Hello, world!` message printed to the screen.
