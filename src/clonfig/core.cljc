@@ -6,6 +6,7 @@
   (atom {}))
 
 (defn defconfig-impl
+  "Please don't call this. Call defconfig instead."
   [var env-var short long desc id source & cli-options]
   (swap! registry assoc var {:env-var env-var
                              :id      id
@@ -26,6 +27,15 @@
          (drop-while numeric)
          (s/join))))
 
+(def non-cli-tools-keys
+  "Keys that only this library cares about and should not pass on to cli-tools"
+  #{:var-sym
+    :env-var
+    :boolean?
+    :source
+    :short
+    :long})
+
 (defmacro defconfig
   "Defines a var that will contain the value of either an environment variable or command-line argument."
   [name & params]
@@ -44,7 +54,7 @@
         unstarred (s/replace (str var-sym) "*" "")
         long (or long (str "--" unstarred (if (not boolean?) (str " " (s/upper-case unstarred)))))]
     `(do (defonce ~(with-meta var-sym {:dynamic true}) ~default)
-         (defconfig-impl (var ~var-sym) ~env-var ~short ~long ~desc ~id ~source ~@(mapcat identity args)))))
+         (defconfig-impl (var ~var-sym) ~env-var ~short ~long ~desc ~id ~source ~@(mapcat identity (apply dissoc args non-cli-tools-keys))))))
 
 (defn init!
   [args]

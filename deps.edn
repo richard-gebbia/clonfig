@@ -1,2 +1,6 @@
 {:paths ["src"]
- :deps {org.clojure/tools.cli {:mvn/version "1.0.194"}}}
+ :deps {org.clojure/tools.cli {:mvn/version "1.0.194"}}
+ :aliases {:test {:extra-paths ["test"]
+                  :extra-deps {com.cognitect/test-runner {:git/url "https://github.com/cognitect-labs/test-runner.git"
+                                                          :sha "6ec7f8eef509cd14d831e8cc16e856b31327a862"}}
+                  :main-opts ["-m" "cognitect.test-runner"]}}}
