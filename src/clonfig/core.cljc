@@ -1,5 +1,6 @@
 (ns clonfig.core
-  (:require [clojure.string :as s]
+  (:require [clojure.spec.alpha :as sp]
+            [clojure.string :as s]
             [clojure.tools.cli :as cli]))
 
 (defn env-var-ify
@@ -20,7 +21,8 @@
     :source
     :short
     :long
-    :parse-fn})
+    :parse-fn
+    :spec})
 
 (def from-env-var-only ::from-env-var-only)
 (def from-cmd-line-only ::from-cmd-line-only)
@@ -31,11 +33,12 @@
 
 (defn defconfig-impl
   "Please don't call this. Call defconfig instead."
-  [var env-var short long desc id source parse-fn & cli-options]
+  [var env-var short long desc id source parse-fn spec & cli-options]
   (swap! registry assoc var {:env-var  env-var
                              :id       id
                              :source   source
                              :parse-fn parse-fn
+                             :spec     spec
                              :cli-options (into [short long desc :id id] cli-options)}))
 
 (defmacro defconfig
@@ -45,24 +48,25 @@
         params     (if (string? (first params)) (rest params) params)
         params-map (apply hash-map params)
         
-        {:keys [var-sym env-var default short long id boolean? source parse-fn]
+        {:keys [var-sym env-var default short long id boolean? source parse-fn spec]
          :or {var-sym  name
               env-var  (s/replace (s/replace (s/upper-case (str name)) "-" "_") "*" "")
               id       (keyword (s/replace (str name) "*" ""))
               boolean? false
               source   from-both
-              parse-fn identity}
+              parse-fn identity
+              spec     any?}
          :as args} params-map
 
         unstarred (s/replace (str var-sym) "*" "")
         long (or long (str "--" unstarred (if (not boolean?) (str " " (s/upper-case unstarred)))))]
     `(do (defonce ~(with-meta var-sym {:dynamic true}) ~default)
-         (defconfig-impl (var ~var-sym) ~env-var ~short ~long ~desc ~id ~source ~parse-fn 
+         (defconfig-impl (var ~var-sym) ~env-var ~short ~long ~desc ~id ~source ~parse-fn ~spec
                          ~@(mapcat identity (apply dissoc args non-cli-tools-keys))))))
 
 (defn init!
   [args]
-  ; first set all the config values to their corresponding env-vars
+  ;; first set all the config values to their corresponding env-vars
   (let [reg @registry]
     #?(:clj (run! (fn [[var {:keys [env-var source]}]]
                     (when (or (= source from-env-var-only)
@@ -70,17 +74,27 @@
                       (alter-var-root var
                         (constantly (System/getenv env-var)))))
                   reg))
-    ; then set the config values from the command-line args if they were specified
-    (let [cli-options (mapv :cli-options (vals reg))
-          parsed-opts (cli/parse-opts args cli-options)]
-      (dorun (map (fn [[var {:keys [id source parse-fn]}]]
+    ;; then set the config values from the command-line args if they were specified
+    (let [cli-options   (mapv :cli-options (vals reg))
+          parsed-opts   (cli/parse-opts args cli-options)
+          spec-failures (atom {})]
+      (dorun (map (fn [[var {:keys [id source parse-fn spec]}]]
+                    ;; get the string value from the command line
                     (let [clarg (-> parsed-opts :options id)]
                       (when (and clarg
                                  (or (= source from-cmd-line-only)
                                      (= source from-both)))
                         (alter-var-root var
                           (constantly clarg))))
-                    (alter-var-root var parse-fn))
+                        
+                    ;; parse the string into a Clojure value
+                    (alter-var-root var parse-fn)
+
+                    ;; validate the data with a spec
+                    (let [explain-data (sp/explain-data spec (var-get var))]
+                      (when explain-data
+                        (swap! spec-failures assoc id explain-data))))
                   reg))
-      ; return any errors
-      (:errors parsed-opts))))
+      ;; return any errors
+      {:cli-errors (:errors parsed-opts)
+       :spec-failures @spec-failures})))
