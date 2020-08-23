@@ -7,7 +7,6 @@
 
 (defn defconfig-impl
   [var env-var short long desc id source & cli-options]
-  (prn cli-options)
   (swap! registry assoc var {:env-var env-var
                              :id      id
                              :source  source
