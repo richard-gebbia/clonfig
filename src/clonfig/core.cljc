@@ -55,7 +55,7 @@
               boolean? false
               source   from-both
               parse-fn identity
-              spec     any?}
+              spec     (if boolean? clojure.core/boolean? any?)}
          :as args} params-map
 
         unstarred (s/replace (str var-sym) "*" "")
