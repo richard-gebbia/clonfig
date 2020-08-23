@@ -1,3 +1,3 @@
 .PHONY: test
 test:
-	FOO=hello clj -A:test
+	FOO=hello NUM=3 clj -A:test

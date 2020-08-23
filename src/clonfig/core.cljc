@@ -2,21 +2,6 @@
   (:require [clojure.string :as s]
             [clojure.tools.cli :as cli]))
 
-(defonce ^:private registry
-  (atom {}))
-
-(defn defconfig-impl
-  "Please don't call this. Call defconfig instead."
-  [var env-var short long desc id source & cli-options]
-  (swap! registry assoc var {:env-var env-var
-                             :id      id
-                             :source  source
-                             :cli-options (into [short long desc :id id] cli-options)}))
-
-(def from-env-var-only ::from-env-var-only)
-(def from-cmd-line-only ::from-cmd-line-only)
-(def from-both ::from-both)
-
 (defn env-var-ify
   "Takes a string that would make for a legal Clojure symbol and converts it into legal environment variable name."
   [s]
@@ -34,7 +19,24 @@
     :boolean?
     :source
     :short
-    :long})
+    :long
+    :parse-fn})
+
+(def from-env-var-only ::from-env-var-only)
+(def from-cmd-line-only ::from-cmd-line-only)
+(def from-both ::from-both)
+
+(defonce ^:private registry
+  (atom {}))
+
+(defn defconfig-impl
+  "Please don't call this. Call defconfig instead."
+  [var env-var short long desc id source parse-fn & cli-options]
+  (swap! registry assoc var {:env-var  env-var
+                             :id       id
+                             :source   source
+                             :parse-fn parse-fn
+                             :cli-options (into [short long desc :id id] cli-options)}))
 
 (defmacro defconfig
   "Defines a var that will contain the value of either an environment variable or command-line argument."
@@ -43,18 +45,20 @@
         params     (if (string? (first params)) (rest params) params)
         params-map (apply hash-map params)
         
-        {:keys [var-sym env-var default short long id boolean? source]
+        {:keys [var-sym env-var default short long id boolean? source parse-fn]
          :or {var-sym  name
               env-var  (s/replace (s/replace (s/upper-case (str name)) "-" "_") "*" "")
               id       (keyword (s/replace (str name) "*" ""))
               boolean? false
-              source   from-both}
+              source   from-both
+              parse-fn identity}
          :as args} params-map
 
         unstarred (s/replace (str var-sym) "*" "")
         long (or long (str "--" unstarred (if (not boolean?) (str " " (s/upper-case unstarred)))))]
     `(do (defonce ~(with-meta var-sym {:dynamic true}) ~default)
-         (defconfig-impl (var ~var-sym) ~env-var ~short ~long ~desc ~id ~source ~@(mapcat identity (apply dissoc args non-cli-tools-keys))))))
+         (defconfig-impl (var ~var-sym) ~env-var ~short ~long ~desc ~id ~source ~parse-fn 
+                         ~@(mapcat identity (apply dissoc args non-cli-tools-keys))))))
 
 (defn init!
   [args]
@@ -69,13 +73,14 @@
     ; then set the config values from the command-line args if they were specified
     (let [cli-options (mapv :cli-options (vals reg))
           parsed-opts (cli/parse-opts args cli-options)]
-      (dorun (map (fn [[var {:keys [id source]}]]
+      (dorun (map (fn [[var {:keys [id source parse-fn]}]]
                     (let [clarg (-> parsed-opts :options id)]
                       (when (and clarg
                                  (or (= source from-cmd-line-only)
                                      (= source from-both)))
                         (alter-var-root var
-                          (constantly clarg)))))
+                          (constantly clarg))))
+                    (alter-var-root var parse-fn))
                   reg))
       ; return any errors
       (:errors parsed-opts))))

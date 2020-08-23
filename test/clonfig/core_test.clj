@@ -41,3 +41,15 @@
   
   ;; teardown
   (ns-unmap *ns* '*bar*))
+
+(deftest parse-fn
+  ;; preconditions
+  (is (= "3" (System/getenv "NUM")))
+
+  (cfg/defconfig *num*
+    :parse-fn #(Integer/parseInt %))
+  (cfg/init! [])
+  (is (= *num* 3))
+  
+  ;; teardown
+  (ns-unmap *ns* '*num*))
