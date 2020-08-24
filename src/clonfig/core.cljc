@@ -15,13 +15,11 @@
 
 (def non-cli-tools-keys
   "Keys that only this library cares about and should not pass on to cli-tools"
-  #{:var-sym
-    :env-var
+  #{:env-var
     :boolean?
     :source
     :short
     :long
-    :parse-fn
     :spec})
 
 (def from-env-var-only ::from-env-var-only)
@@ -39,19 +37,18 @@
                              :source   source
                              :parse-fn parse-fn
                              :spec     spec
-                             :cli-options (into [short long desc :id id] cli-options)}))
+                             :cli-options (into [short long desc :id id :parse-fn parse-fn] cli-options)}))
 
 (defmacro defconfig
   "Defines a var that will contain the value of either an environment variable or command-line argument."
-  [name & params]
+  [var-sym & params]
   (let [desc       (if (string? (first params)) (first params) "")
         params     (if (string? (first params)) (rest params) params)
         params-map (apply hash-map params)
         
-        {:keys [var-sym env-var default short long id boolean? source parse-fn spec]
-         :or {var-sym  name
-              env-var  (s/replace (s/replace (s/upper-case (str name)) "-" "_") "*" "")
-              id       (keyword (s/replace (str name) "*" ""))
+        {:keys [env-var default short long id boolean? source parse-fn spec]
+         :or {env-var  (s/replace (s/replace (s/upper-case (str var-sym)) "-" "_") "*" "")
+              id       (keyword (s/replace (str var-sym) "*" ""))
               boolean? false
               source   from-both
               parse-fn identity
@@ -87,8 +84,8 @@
                         (alter-var-root var
                           (constantly clarg))))
                         
-                    ;; parse the string into a Clojure value
-                    (alter-var-root var parse-fn)
+                    ;; parse the string into a Clojure value (if it hasn't already been parsed)
+                    (alter-var-root var #(if (string? %) (parse-fn %) %))
 
                     ;; validate the data with a spec
                     (let [explain-data (sp/explain-data spec (var-get var))]
