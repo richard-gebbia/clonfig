@@ -3,4 +3,9 @@
  :aliases {:test {:extra-paths ["test"]
                   :extra-deps {com.cognitect/test-runner {:git/url "https://github.com/cognitect-labs/test-runner.git"
                                                           :sha "6ec7f8eef509cd14d831e8cc16e856b31327a862"}}
-                  :main-opts ["-m" "cognitect.test-runner"]}}}
+                  :main-opts ["-m" "cognitect.test-runner"]}
+           :deploy {:extra-deps {slipset/deps-deploy {:mvn/version "RELEASE"}}
+                    :main-opts ["-m" "deps-deploy.deps-deploy" "deploy"
+                    "target/clonfig.jar"]}
+           :uberdeps {:extra-deps {uberdeps/uberdeps {:mvn/version "1.0.0"}}
+                      :main-opts ["-m" "uberdeps.uberjar"]}}}

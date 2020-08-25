@@ -27,11 +27,39 @@ clj -m my-cool-program.core --foo 'Hello, world!'
 
 and you'll see the familiar `Hello, world!` message printed to the screen.
 
+## Coordinates
+
+[![Clojars Project](https://img.shields.io/clojars/v/richard-gebbia/clonfig.svg)](https://clojars.org/richard-gebbia/clonfig)
+
+### Leiningen/Boot
+```
+[richard-gebbia/clonfig "0.1.0"]
+```
+
+### deps.edn
+```
+richard-gebbia/clonfig {:mvn/version "0.1.0"}
+```
+
+### Gradle
+```
+compile 'richard-gebbia:clonfig:0.1.0'
+```
+
+### Maven
+```
+<dependency>
+  <groupId>richard-gebbia</groupId>
+  <artifactId>clonfig</artifactId>
+  <version>0.1.0</version>
+</dependency>
+```
+
 ## Options
 
 There are a number of options that you can add to a `defconfig` to customize it to your liking.
 
-### cli-tools options
+#### cli-tools options
 
 This library makes use of the excellent [clojure/tools.cli](https://github.com/clojure/tools.cli) library. Any options you pass to `defconfig` will automatically be propagated as `cli-options`. This means you can do things like:
 
@@ -45,7 +73,7 @@ This library makes use of the excellent [clojure/tools.cli](https://github.com/c
 
 to forward the extra options over to `clojure/tools.cli`.
 
-### `:env-var`
+#### `:env-var`
 
 Normally (on the JVM only currently), if a `defconfig` is not explicitly set via the command line, it reads its value from the environment. This option allows you to set the name of the environment variable to read from.
 
@@ -70,7 +98,7 @@ e.g.
 - `*foo-bar*` looks for `FOO_BAR`
 - `*12foo-bar34*` looks for `FOO_BAR34`
 
-### `:short`
+#### `:short`
 
 Add a short, ideally one-character switch for the `defconfig` on the command line.
 
@@ -86,7 +114,7 @@ clj -m my-cool-program.core -f 'Hello, world!'
 
 By default, this is `nil`, meaning there isn't a short form to determine the `defconfig`'s value from the command line.
 
-### `:long`
+#### `:long`
 
 Customize the long, usually double-dashed switch for the `defconfig` on the command line.
 
@@ -102,7 +130,7 @@ clj -m my-cool-program.core --bar 'Hello, world!'
 
 By default, this prepends `--` to the name of the `defconfig` with all `*` characters removed.
 
-### `:boolean?`
+#### `:boolean?`
 
 Use this to indicate to the `clojure/tools.cli` parser that this `defconfig` is a boolean and therefore should only check for the presence of the switch rather expecting a corresponding value.
 
@@ -126,7 +154,7 @@ clj -m my-cool-program.core --foo true
 
 By default, this is `false`, unless `:default` is set to `true` or `false`.
 
-### `:source`
+#### `:source`
 
 Control how the variable gets its value. There are three possible values for this option:
 - `clonfig.core/from-env-var-only` to indicate that the `defconfig`'s value should only be read from an environment variable (and not from the command line)
@@ -149,7 +177,7 @@ would print `hello`. If `:source` was set to `from-cmd-line-only`, then it would
 
 By default, this option is set to `from-both`.
 
-### `:default`
+#### `:default`
 
 This acts just like `:default` in `clojure/tools.cli` and is ultimately passed to `clojure.tools.cli/parse-opts`. If a value isn't specified either in the environment or via the command line, it will be set to the `:default` value.
 
@@ -165,7 +193,7 @@ clj -m my-cool-program.core
 
 it will print `wow`.
 
-### `:parse-fn`
+#### `:parse-fn`
 
 This acts just like [`:parse-fn` in `clojure/tools.cli`](https://github.com/clojure/tools.cli#option-argument-validation). When a value is read from either the environment or from the command line, the `parse-fn` is run to parse it from a string to a value.
 
@@ -181,7 +209,7 @@ clj -m my-cool-program.core --foo 3
 
 `*foo*` will have the value `3` rather than `"3"`.
 
-### `:spec`
+#### `:spec`
 
 Add spec validation to the `defconfig` after it's been parsed via `:parse-fn`. See the "return value" section below.
 
